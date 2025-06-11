@@ -1,0 +1,12 @@
+azure-identity
+azure-storage-blob
+msticpy
+pandas
+python-dotenv
+tenacity
+tqdm
+requests
+numpy
+pyarrow
+openpyxl
+loguru
