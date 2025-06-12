@@ -1,14 +1,20 @@
-# main.tf
-
-provider "azurerm" {
-  features {}
-}
-
 #---------------------------
 # Variables
 #---------------------------
 variable "location" {
   default = "eastus"
+}
+
+variable "user_obj_id" {
+  default = "<your_user_obj_id>"
+}
+
+variable "tenant_id" {
+  default = "<your_tenant_id>"
+}
+
+variable "subscription_id"{
+  default = "<your_subscription_id>"
 }
 
 variable "project" {
@@ -18,7 +24,7 @@ variable "project" {
 variable "allowed_ip" {
   description = "The external IP address allowed to access the storage account."
   type        = string
-  default     = ""
+  default     = "<external-ip-to-allow-access-to-storageaccount>"
 }
 
 variable "resource_group_name" {
@@ -28,43 +34,34 @@ variable "resource_group_name" {
 }
 
 #---------------------------
-# Virtual Network /  Subnet / NSG
+# Provider Config
+#---------------------------
+
+provider "azurerm" {
+  features {}
+  subscription_id = var.subscription_id
+}
+
+data "azurerm_client_config" "current" {
+}
+
+#---------------------------
+# Virtual Network / Subnet / NSG
 #---------------------------
 resource "azurerm_virtual_network" "log-export-vnet" {
   name                = "${var.project}-vnet"
   address_space       = ["10.0.0.0/16"]
   location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
+  resource_group_name  = var.resource_group_name
 }
 
 resource "azurerm_subnet" "log-export-subnet" {
   name                 = "${var.project}-subnet"
   resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.vnet.name
+  virtual_network_name = azurerm_virtual_network.log-export-vnet.name
   address_prefixes     = ["10.0.1.0/24"]
 }
 
-resource "azurerm_network_security_group" "log-export-nsg" {
-  name                = "${var.project}-subnet-nsg"
-  location            = azurerm_resource_group.example.location
-  resource_group_name = azurerm_resource_group.example.name
-
-  security_rule {
-    name                       = "test123"
-    priority                   = 100
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "*"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  tags = {
-    environment = "Production"
-  }
-}
 
 #---------------------------
 # Application Insights
@@ -79,7 +76,7 @@ resource "azurerm_application_insights" "log-export-insights" {
 #---------------------------
 # Key Vault
 #---------------------------
-resource "azurerm_key_vault" "example" {
+resource "azurerm_key_vault" "log-export-keyvault" {
   name                     = "${var.project}-keyvault"
   location                 = var.location
   resource_group_name      = var.resource_group_name
@@ -92,7 +89,7 @@ resource "azurerm_key_vault" "example" {
 # Storage Account
 #---------------------------
 resource "azurerm_storage_account" "log-export-storage" {
-  name                     = "${var.project}-storage"
+  name                     = "logexportstorage"
   resource_group_name      = var.resource_group_name
   location                 = var.location
   account_tier             = "Standard"
@@ -104,7 +101,7 @@ resource "azurerm_storage_account" "log-export-storage" {
   network_rules {
     default_action             = "Deny"
     ip_rules                   = [var.allowed_ip]
-    virtual_network_subnet_ids = [azurerm_subnet.subnet.id]
+    virtual_network_subnet_ids = [azurerm_subnet.log-export-subnet.id]
   }
 
   blob_properties {
@@ -137,9 +134,9 @@ resource "azurerm_machine_learning_workspace" "workspace" {
   location                      = var.location
   resource_group_name           = var.resource_group_name
   public_network_access_enabled = false
-  application_insights_id       = ""
+  application_insights_id       = azurerm_application_insights.log-export-insights.id
   storage_account_id            = azurerm_storage_account.log-export-storage.id
-  key_vault_id                  = ""
+  key_vault_id                  = azurerm_key_vault.log-export-keyvault.id
 
   identity {
     type = "SystemAssigned"
@@ -149,15 +146,13 @@ resource "azurerm_machine_learning_workspace" "workspace" {
 
 resource "azurerm_machine_learning_compute_instance" "compute" {
   name                          = "${var.project}-mlw-compute"
-  location                      = var.location
-  resource_group_name           = var.resource_group_name
   machine_learning_workspace_id = azurerm_machine_learning_workspace.workspace.id
   virtual_machine_size          = "Standard_D8s_v3"
-  subnet_resource_id            = azurerm_subnet.subnet.id
+  subnet_resource_id            = azurerm_subnet.log-export-subnet.id
 
   assign_to_user {
-    object_id = "<YOUR_USER_OBJECT_ID>" # Replace with the user running jobs
-    tenant_id = "<YOUR_TENANT_ID>"
+    object_id = var.user_obj_id
+    tenant_id = var.tenant_id
   }
 
   identity {
