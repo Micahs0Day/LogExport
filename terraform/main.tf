@@ -46,19 +46,20 @@ data "azurerm_client_config" "current" {
 }
 
 #---------------------------
-# Virtual Network / Subnet / NSG
+# Virtual Network /  Subnet / NSG
 #---------------------------
 resource "azurerm_virtual_network" "log-export-vnet" {
   name                = "${var.project}-vnet"
   address_space       = ["10.0.0.0/16"]
   location            = var.location
-  resource_group_name  = var.resource_group_name
+  resource_group_name = var.resource_group_name
 }
 
 resource "azurerm_subnet" "log-export-subnet" {
   name                 = "${var.project}-subnet"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.log-export-vnet.name
+  service_endpoints = ["Microsoft.Storage"]
   address_prefixes     = ["10.0.1.0/24"]
 }
 
@@ -88,8 +89,14 @@ resource "azurerm_key_vault" "log-export-keyvault" {
 #---------------------------
 # Storage Account
 #---------------------------
+resource "random_string" "suffix" {
+  length  = 7
+  special = false
+  upper   = false
+}
+
 resource "azurerm_storage_account" "log-export-storage" {
-  name                     = "logexportstorage"
+  name                     = "logexportstorage${random_string.suffix.result}"
   resource_group_name      = var.resource_group_name
   location                 = var.location
   account_tier             = "Standard"
@@ -147,7 +154,7 @@ resource "azurerm_machine_learning_workspace" "workspace" {
 resource "azurerm_machine_learning_compute_instance" "compute" {
   name                          = "${var.project}-mlw-compute"
   machine_learning_workspace_id = azurerm_machine_learning_workspace.workspace.id
-  virtual_machine_size          = "Standard_D8s_v3"
+  virtual_machine_size          = "STANDARD_B2TS_V2"
   subnet_resource_id            = azurerm_subnet.log-export-subnet.id
 
   assign_to_user {
