@@ -6,31 +6,52 @@ variable "location" {
 }
 
 variable "user_obj_id" {
-  default = "<your_user_obj_id>"
+  default = "<user_obj_id>"
 }
 
 variable "tenant_id" {
-  default = "<your_tenant_id>"
+  default = "<enant_id>"
 }
 
-variable "subscription_id"{
-  default = "<your_subscription_id>"
+variable "subscription_id" {
+  default = "<subscription_id>"
 }
 
 variable "project" {
   default = "log-export"
 }
 
-variable "allowed_ip" {
+variable "allowed_external_ip" {
   description = "The external IP address allowed to access the storage account."
   type        = string
-  default     = "<external-ip-to-allow-access-to-storageaccount>"
+  default     = "<allowed_external_ip>"
+}
+
+variable "allowed_ingress_ip" {
+  description = "The IP address that will access the VM via SSH/HTTP(S)"
+  type        = string
+  default     = "<allowed_ingress_ip>"
 }
 
 variable "resource_group_name" {
-  default = "<your-rg-name>"
+  default = "<resource_group_name>"
   type    = string
 
+}
+
+variable "ssh_public_key_path" {
+  default = "~/.ssh/id_rsa.pub"
+}
+
+locals {
+  ssh_public_key = file(var.ssh_public_key_path)
+}
+
+# Random suffix for uniqueness
+resource "random_string" "suffix" {
+  length  = 4
+  upper   = false
+  special = false
 }
 
 #---------------------------
@@ -46,7 +67,88 @@ data "azurerm_client_config" "current" {
 }
 
 #---------------------------
-# Virtual Network /  Subnet / NSG
+# Storage Account
+#---------------------------
+resource "azurerm_storage_account" "log-export-storage" {
+  name                     = "logexportstorage${random_string.suffix.result}1"
+  resource_group_name      = var.resource_group_name
+  location                 = var.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+
+  allow_nested_items_to_be_public = true
+  min_tls_version                 = "TLS1_2"
+
+  network_rules {
+    default_action             = "Deny"
+    ip_rules                   = [var.allowed_external_ip]
+    virtual_network_subnet_ids = [azurerm_subnet.log-export-subnet.id]
+  }
+
+  blob_properties {
+    delete_retention_policy {
+      days = 7
+    }
+  }
+
+}
+
+data "azurerm_storage_account" "log_export_storage" {
+  name                = azurerm_storage_account.log-export-storage.name
+  resource_group_name = var.resource_group_name
+}
+
+#---------------------------
+# Key Vault
+#---------------------------
+resource "azurerm_key_vault" "log_export_kv" {
+  name                     = "${var.project}-kv${random_string.suffix.result}"
+  location                 = var.location
+  resource_group_name      = var.resource_group_name
+  tenant_id                = data.azurerm_client_config.current.tenant_id
+  sku_name                 = "standard"
+  purge_protection_enabled = true
+
+  access_policy {
+    tenant_id = data.azurerm_client_config.current.tenant_id
+    object_id = data.azurerm_client_config.current.object_id
+
+    key_permissions = [
+      "Create",
+      "Decrypt",
+      "Get",
+      "Delete",
+      "Import",
+      "Verify",
+      "Get",
+      "List",
+      "Sign",
+      "Verify"
+    ]
+
+    secret_permissions = [
+      "Get",
+      "Set",
+      "List",
+      "Delete"
+    ]
+  }
+}
+
+resource "azurerm_key_vault_secret" "ssh_pubkey_secret" {
+  name         = "ssh-pubkey"
+  value        = local.ssh_public_key
+  key_vault_id = azurerm_key_vault.log_export_kv.id
+}
+
+resource "azurerm_key_vault_secret" "storage_access_key" {
+  name         = "storage-access-key"
+  value        = data.azurerm_storage_account.log_export_storage.primary_access_key
+  key_vault_id = azurerm_key_vault.log_export_kv.id
+}
+
+#---------------------------
+# Network Config
 #---------------------------
 resource "azurerm_virtual_network" "log-export-vnet" {
   name                = "${var.project}-vnet"
@@ -59,111 +161,160 @@ resource "azurerm_subnet" "log-export-subnet" {
   name                 = "${var.project}-subnet"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.log-export-vnet.name
-  service_endpoints = ["Microsoft.Storage"]
+  service_endpoints    = ["Microsoft.Storage"]
   address_prefixes     = ["10.0.1.0/24"]
 }
 
-
-#---------------------------
-# Application Insights
-#---------------------------
-resource "azurerm_application_insights" "log-export-insights" {
-  name                = "${var.project}-insights"
+# Public IP for the VM
+resource "azurerm_public_ip" "logexport_public_ip" {
+  name                = "logexportpip-${random_string.suffix.result}"
   location            = var.location
   resource_group_name = var.resource_group_name
-  application_type    = "web"
+  allocation_method   = "Static"
+  sku                 = "Standard"
 }
 
-#---------------------------
-# Key Vault
-#---------------------------
-resource "azurerm_key_vault" "log-export-keyvault" {
-  name                     = "${var.project}-keyvault"
-  location                 = var.location
-  resource_group_name      = var.resource_group_name
-  tenant_id                = data.azurerm_client_config.current.tenant_id
-  sku_name                 = "standard"
-  purge_protection_enabled = true
-}
+# Network Security Group
+resource "azurerm_network_security_group" "logexport_nsg" {
+  name                = "logexportnsg-${random_string.suffix.result}"
+  location            = var.location
+  resource_group_name = var.resource_group_name
 
-#---------------------------
-# Storage Account
-#---------------------------
-resource "random_string" "suffix" {
-  length  = 7
-  special = false
-  upper   = false
-}
-
-resource "azurerm_storage_account" "log-export-storage" {
-  name                     = "logexportstorage${random_string.suffix.result}"
-  resource_group_name      = var.resource_group_name
-  location                 = var.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-
-  allow_nested_items_to_be_public = true
-  min_tls_version                 = "TLS1_2"
-
-  network_rules {
-    default_action             = "Deny"
-    ip_rules                   = [var.allowed_ip]
-    virtual_network_subnet_ids = [azurerm_subnet.log-export-subnet.id]
+  # Ingress SSH
+  security_rule {
+    name                       = "SSH"
+    priority                   = 1001
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = var.allowed_ingress_ip
+    destination_address_prefix = "*"
   }
 
-  blob_properties {
-    delete_retention_policy {
-      days = 7
-    }
+  # Ingress HTTP
+  security_rule {
+    name                       = "HTTP"
+    priority                   = 1002
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "80"
+    source_address_prefix      = var.allowed_ingress_ip
+    destination_address_prefix = "*"
   }
 
-  tags = {
-    environment = "prod"
-    project     = var.project
+  # Ingress HTTPS
+  security_rule {
+    name                       = "HTTPS"
+    priority                   = 1003
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = var.allowed_ingress_ip
+    destination_address_prefix = "*"
+  }
+
+  # Internal Network Route Allow all
+  security_rule {
+    name                       = "Allow-Internal-VNet"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "VirtualNetwork"
+    destination_address_prefix = "VirtualNetwork"
   }
 }
 
-resource "random_id" "suffix" {
-  byte_length = 4
+# NAT Gateway
+resource "azurerm_nat_gateway" "logexport_nat" {
+  name                    = "logexportnat-${random_string.suffix.result}"
+  location                = var.location
+  resource_group_name     = var.resource_group_name
+  sku_name                = "Standard"
+  idle_timeout_in_minutes = 10
+}
+
+resource "azurerm_nat_gateway_public_ip_association" "logexport-plbc-ip-assoc" {
+  nat_gateway_id       = azurerm_nat_gateway.logexport_nat.id
+  public_ip_address_id = azurerm_public_ip.logexport_public_ip.id
+}
+
+# Route Table for outbound NAT
+resource "azurerm_route_table" "logexport_route_table" {
+  name                = "logexport-rt-${random_string.suffix.result}"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+}
+
+resource "azurerm_subnet_route_table_association" "logexport_route_table_assoc" {
+  subnet_id      = azurerm_subnet.log-export-subnet.id
+  route_table_id = azurerm_route_table.logexport_route_table.id
+}
+
+# Subnet NAT association
+resource "azurerm_subnet_nat_gateway_association" "logexport_nat_assoc" {
+  subnet_id      = azurerm_subnet.log-export-subnet.id
+  nat_gateway_id = azurerm_nat_gateway.logexport_nat.id
 }
 
 #---------------------------
-# AML Compute Instance
+# Virtual Machine
 #---------------------------
-resource "azurerm_user_assigned_identity" "aml_identity" {
-  name                = "${var.project}-aml-identity"
+
+# Updated NIC with Public IP
+resource "azurerm_network_interface" "log-export-nic" {
+  name                = "logexportnic${random_string.suffix.result}"
   resource_group_name = var.resource_group_name
   location            = var.location
-}
 
-resource "azurerm_machine_learning_workspace" "workspace" {
-  name                          = "${var.project}-mlw"
-  location                      = var.location
-  resource_group_name           = var.resource_group_name
-  public_network_access_enabled = false
-  application_insights_id       = azurerm_application_insights.log-export-insights.id
-  storage_account_id            = azurerm_storage_account.log-export-storage.id
-  key_vault_id                  = azurerm_key_vault.log-export-keyvault.id
-
-  identity {
-    type = "SystemAssigned"
-  }
-  sku_name = "Basic"
-}
-
-resource "azurerm_machine_learning_compute_instance" "compute" {
-  name                          = "${var.project}-mlw-compute"
-  machine_learning_workspace_id = azurerm_machine_learning_workspace.workspace.id
-  virtual_machine_size          = "STANDARD_B2TS_V2"
-  subnet_resource_id            = azurerm_subnet.log-export-subnet.id
-
-  assign_to_user {
-    object_id = var.user_obj_id
-    tenant_id = var.tenant_id
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.log-export-subnet.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.logexport_public_ip.id
   }
 
-  identity {
-    type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.aml_identity.id]
+}
+
+# Associate NSG to NIC directly
+resource "azurerm_network_interface_security_group_association" "logexport_nsg_nic_assoc" {
+  network_interface_id      = azurerm_network_interface.log-export-nic.id
+  network_security_group_id = azurerm_network_security_group.logexport_nsg.id
+}
+
+resource "azurerm_linux_virtual_machine" "log-export-vm" {
+  name                = "logexportvm${random_string.suffix.result}"
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  size                = "Standard_F2"
+  admin_username      = "exportadmin"
+  network_interface_ids = [
+    azurerm_network_interface.log-export-nic.id,
+  ]
+
+  admin_ssh_key {
+    username   = "exportadmin"
+    public_key = azurerm_key_vault_secret.ssh_pubkey_secret.value
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+    disk_size_gb         = 200
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
   }
 }
