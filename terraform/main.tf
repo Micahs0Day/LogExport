@@ -2,7 +2,7 @@
 # Variables
 #---------------------------
 variable "location" {
-  default = "eastus"
+  default = "eastus2"
 }
 
 variable "user_obj_id" {
@@ -10,7 +10,7 @@ variable "user_obj_id" {
 }
 
 variable "tenant_id" {
-  default = "<enant_id>"
+  default = "<tenant_id>"
 }
 
 variable "subscription_id" {
@@ -76,8 +76,10 @@ resource "azurerm_storage_account" "log-export-storage" {
   account_tier             = "Standard"
   account_replication_type = "LRS"
 
+  public_network_access_enabled   = true
   allow_nested_items_to_be_public = true
-  min_tls_version                 = "TLS1_2"
+
+  min_tls_version = "TLS1_2"
 
   network_rules {
     default_action             = "Deny"
@@ -130,7 +132,11 @@ resource "azurerm_key_vault" "log_export_kv" {
       "Get",
       "Set",
       "List",
-      "Delete"
+      "Delete",
+      "Recover",
+      "Restore",
+      "Backup",
+      "Purge"
     ]
   }
 }
@@ -193,20 +199,7 @@ resource "azurerm_network_security_group" "logexport_nsg" {
     destination_address_prefix = "*"
   }
 
-  # Ingress HTTP
-  security_rule {
-    name                       = "HTTP"
-    priority                   = 1002
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "80"
-    source_address_prefix      = var.allowed_ingress_ip
-    destination_address_prefix = "*"
-  }
-
-  # Ingress HTTPS
+  # Ingress to Jupyter Server
   security_rule {
     name                       = "HTTPS"
     priority                   = 1003
@@ -214,7 +207,7 @@ resource "azurerm_network_security_group" "logexport_nsg" {
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
-    destination_port_range     = "443"
+    destination_port_range     = "8888"
     source_address_prefix      = var.allowed_ingress_ip
     destination_address_prefix = "*"
   }
@@ -233,20 +226,6 @@ resource "azurerm_network_security_group" "logexport_nsg" {
   }
 }
 
-# NAT Gateway
-resource "azurerm_nat_gateway" "logexport_nat" {
-  name                    = "logexportnat-${random_string.suffix.result}"
-  location                = var.location
-  resource_group_name     = var.resource_group_name
-  sku_name                = "Standard"
-  idle_timeout_in_minutes = 10
-}
-
-resource "azurerm_nat_gateway_public_ip_association" "logexport-plbc-ip-assoc" {
-  nat_gateway_id       = azurerm_nat_gateway.logexport_nat.id
-  public_ip_address_id = azurerm_public_ip.logexport_public_ip.id
-}
-
 # Route Table for outbound NAT
 resource "azurerm_route_table" "logexport_route_table" {
   name                = "logexport-rt-${random_string.suffix.result}"
@@ -257,12 +236,6 @@ resource "azurerm_route_table" "logexport_route_table" {
 resource "azurerm_subnet_route_table_association" "logexport_route_table_assoc" {
   subnet_id      = azurerm_subnet.log-export-subnet.id
   route_table_id = azurerm_route_table.logexport_route_table.id
-}
-
-# Subnet NAT association
-resource "azurerm_subnet_nat_gateway_association" "logexport_nat_assoc" {
-  subnet_id      = azurerm_subnet.log-export-subnet.id
-  nat_gateway_id = azurerm_nat_gateway.logexport_nat.id
 }
 
 #---------------------------
@@ -304,6 +277,8 @@ resource "azurerm_linux_virtual_machine" "log-export-vm" {
     username   = "exportadmin"
     public_key = azurerm_key_vault_secret.ssh_pubkey_secret.value
   }
+
+  custom_data = base64encode("jupyer_install.sh")
 
   os_disk {
     caching              = "ReadWrite"
