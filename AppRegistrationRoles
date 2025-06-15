@@ -1,0 +1,13 @@
+
+Create a app registration (DetaExportApp) Add these role assignments to your RG
+
+Scope: /subscriptions/<your-subscription-id>/resourceGroups/<your-resource-group>
+
+Azure Center for SAP solutions administrator
+Key Vault Contributor
+Log Analytics Contributor
+Managed Identity Contributor
+Network Contributor
+SSH PublicKeys Contributor Role
+Storage Account Contributor
+Virtual Machine Contributor
