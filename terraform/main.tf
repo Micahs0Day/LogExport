@@ -199,7 +199,20 @@ resource "azurerm_network_security_group" "logexport_nsg" {
     destination_address_prefix = "*"
   }
 
-  # Ingress to Jupyter Server
+  # Ingress HTTP
+  security_rule {
+    name                       = "HTTP"
+    priority                   = 1002
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "80"
+    source_address_prefix      = var.allowed_ingress_ip
+    destination_address_prefix = "*"
+  }
+
+  # Ingress HTTPS
   security_rule {
     name                       = "HTTPS"
     priority                   = 1003
@@ -207,7 +220,7 @@ resource "azurerm_network_security_group" "logexport_nsg" {
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
-    destination_port_range     = "8888"
+    destination_port_range     = "443"
     source_address_prefix      = var.allowed_ingress_ip
     destination_address_prefix = "*"
   }
@@ -224,18 +237,6 @@ resource "azurerm_network_security_group" "logexport_nsg" {
     source_address_prefix      = "VirtualNetwork"
     destination_address_prefix = "VirtualNetwork"
   }
-}
-
-# Route Table for outbound NAT
-resource "azurerm_route_table" "logexport_route_table" {
-  name                = "logexport-rt-${random_string.suffix.result}"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-}
-
-resource "azurerm_subnet_route_table_association" "logexport_route_table_assoc" {
-  subnet_id      = azurerm_subnet.log-export-subnet.id
-  route_table_id = azurerm_route_table.logexport_route_table.id
 }
 
 #---------------------------
@@ -278,7 +279,7 @@ resource "azurerm_linux_virtual_machine" "log-export-vm" {
     public_key = azurerm_key_vault_secret.ssh_pubkey_secret.value
   }
 
-  custom_data = base64encode("jupyer_install.sh")
+custom_data = base64encode(file("${path.module}/jupyer_install.sh"))
 
   os_disk {
     caching              = "ReadWrite"
