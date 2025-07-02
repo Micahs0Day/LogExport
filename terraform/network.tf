@@ -17,15 +17,22 @@ resource "azurerm_subnet" "log-export-subnet" {
   virtual_network_name              = azurerm_virtual_network.log-export-vnet.name
   address_prefixes                  = var.mlw_subnet_space
   private_endpoint_network_policies = "Enabled"
-  #service_endpoints                 = ["Microsoft.Storage", "Microsoft.KeyVault"]
+}
+
+# --- Firewall VNET Subnet --- #
+resource "azurerm_subnet" "AzureFirewallSubnet" {
+  name                 = "AzureFirewallSubnet"
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.log-export-vnet.name
+  address_prefixes     = var.azfw_subnet_space
 }
 
 # --- Bastion VNET Subnet --- #
-resource "azurerm_subnet" "azure_bastion" {
+resource "azurerm_subnet" "log-export-azure-bastion-subnet" {
   name                 = "AzureBastionSubnet"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.log-export-vnet.name
-  address_prefixes     = var.bastion_subnet_address_space
+  address_prefixes     = var.bastion_subnet_space
 }
 
 # --- Jumpbox VNET Subnet --- #
@@ -33,7 +40,7 @@ resource "azurerm_subnet" "log-export-jumpbox-subnet" {
   name                              = "log-export-jumpbox-subnet"
   resource_group_name               = var.resource_group_name
   virtual_network_name              = azurerm_virtual_network.log-export-vnet.name
-  address_prefixes                  = var.jumpbox_subnet_address_space
+  address_prefixes                  = var.jumpbox_subnet_space
   private_endpoint_network_policies = "Enabled"
 }
 
