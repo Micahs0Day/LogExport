@@ -1,8 +1,10 @@
 #---------------------------
 # Variables
 #---------------------------
+
+# Provider Config
 variable "location" {
-  default = "eastus"
+  default = "eastus2"
 }
 
 variable "tenant_id" {
@@ -17,41 +19,50 @@ variable "project" {
   default = "log-export"
 }
 
-variable "allowed_external_ip" {
-  description = "The external IP address allowed to access the storage account."
-  type        = string
-  default     = ""
+variable "resource_group_name" {
+  default = ""
+  type    = string
 }
 
-variable "mlw_subnet_space" {
-  type        = list(string)
-  description = "IPv4 space of the ML workspace subnet"
-  default     = ["10.0.0.0/24"]
+# External IPs
+variable "external_ips" {
+  description = "The external IPs allowed to access the workspace."
+  type        = list(any)
+  default     = [""]
 }
 
+# Subnets
 variable "vnet_address_space" {
   type        = list(string)
   description = "IPv4 space of the virtual network"
   default     = ["10.0.0.0/16"]
 }
 
-variable "resource_group_name" {
-  default = ""
-  type    = string
+variable "mlw_subnet_space" {
+  type        = list(string)
+  description = "IPv4 space of the ML workspace subnet"
+  default     = ["10.0.1.0/24"]
 }
 
-variable "bastion_subnet_address_space" {
+variable "bastion_subnet_space" {
   type        = list(string)
   description = "Address space of the bastion subnet"
-  default     = ["10.0.5.0/24"]
+  default     = ["10.0.2.0/24"]
 }
 
-variable "jumpbox_subnet_address_space" {
+variable "jumpbox_subnet_space" {
   type        = list(string)
   description = "Address space of the Jumpbox subnet"
-  default     = ["10.0.4.0/24"]
+  default     = ["10.0.3.0/24"]
 }
 
+variable "azfw_subnet_space" {
+  type        = list(string)
+  description = "Address space of the azfw subnet"
+  default     = ["10.0.4.0/26"]
+}
+
+# Jumpbox
 variable "log-export-jumpbox_name" {
   type        = string
   description = "Name of jumpbox vm"
