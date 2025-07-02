@@ -25,9 +25,17 @@ log-export-pipeline/
 ├── LEARNING_PLAN.md            # Guide to learn how to build this
 ├── RFC.md                      # Architecture and design rationale
 └── README.md                   # This file
+```
 
 ---
 
 ## 🔗 References
-https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs
 
+# Docs
+https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs
+https://learn.microsoft.com/en-us/azure/machine-learning/how-to-secure-workspace-vnet?view=azureml-api-2&tabs=required%2Cpe%2Ccli
+https://learn.microsoft.com/en-us/azure/machine-learning/how-to-network-security-overview?view=azureml-api-2
+
+# Terraform
+https://learn.microsoft.com/en-us/azure/machine-learning/how-to-manage-workspace-terraform?view=azureml-api-2&tabs=privateworkspace
+https://learn.microsoft.com/en-us/azure/firewall-manager/quick-firewall-policy-terraform
