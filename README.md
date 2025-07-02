@@ -40,6 +40,7 @@ https://learn.microsoft.com/en-us/azure/private-link/private-endpoint-dns
 https://learn.microsoft.com/en-us/azure/private-link/private-endpoint-overview
 https://learn.microsoft.com/en-us/azure/virtual-network/concepts-and-best-practices
 https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/cloud-scale-analytics/architectures/connect-to-environments-privately
+https://learn.microsoft.com/en-us/azure/firewall/policy-rule-sets
 
 # Terraform
 https://learn.microsoft.com/en-us/azure/machine-learning/how-to-manage-workspace-terraform?view=azureml-api-2&tabs=privateworkspace
