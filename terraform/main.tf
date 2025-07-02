@@ -46,7 +46,7 @@ resource "azurerm_storage_account" "log-export-storage" {
   network_rules {
     default_action = "Deny"
     bypass         = ["AzureServices"]
-    ip_rules       = [var.allowed_external_ip]
+    ip_rules       = var.external_ips
   }
 
   blob_properties {
@@ -133,12 +133,12 @@ resource "azurerm_machine_learning_workspace" "log-export-mlw" {
 }
 
 resource "azurerm_machine_learning_compute_instance" "mlw-compute" {
-  name                          = "${var.project}-mlw-compute"
+  name                          = "mlw-compute-${random_string.suffix.result}"
   machine_learning_workspace_id = azurerm_machine_learning_workspace.log-export-mlw.id
   virtual_machine_size          = "Standard_D4s_v3"
   node_public_ip_enabled        = false
-  authorization_type = "personal"
-  subnet_resource_id = azurerm_subnet.log-export-subnet.id
+  authorization_type            = "personal"
+  subnet_resource_id            = azurerm_subnet.log-export-subnet.id
   depends_on = [
     azurerm_private_endpoint.ple-mlw
   ]
