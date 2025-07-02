@@ -35,6 +35,11 @@ log-export-pipeline/
 https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs
 https://learn.microsoft.com/en-us/azure/machine-learning/how-to-secure-workspace-vnet?view=azureml-api-2&tabs=required%2Cpe%2Ccli
 https://learn.microsoft.com/en-us/azure/machine-learning/how-to-network-security-overview?view=azureml-api-2
+https://learn.microsoft.com/en-us/azure/firewall/firewall-faq
+https://learn.microsoft.com/en-us/azure/private-link/private-endpoint-dns
+https://learn.microsoft.com/en-us/azure/private-link/private-endpoint-overview
+https://learn.microsoft.com/en-us/azure/virtual-network/concepts-and-best-practices
+https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/cloud-scale-analytics/architectures/connect-to-environments-privately
 
 # Terraform
 https://learn.microsoft.com/en-us/azure/machine-learning/how-to-manage-workspace-terraform?view=azureml-api-2&tabs=privateworkspace
