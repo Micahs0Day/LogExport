@@ -25,3 +25,9 @@ log-export-pipeline/
 ├── LEARNING_PLAN.md            # Guide to learn how to build this
 ├── RFC.md                      # Architecture and design rationale
 └── README.md                   # This file
+
+---
+
+## 🔗 References
+https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs
+
