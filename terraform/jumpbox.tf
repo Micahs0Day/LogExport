@@ -107,7 +107,7 @@ resource "azurerm_network_security_group" "log-export-bastion-nsg" {
 }
 
 resource "azurerm_subnet_network_security_group_association" "log-export-bastion-nsg-assoc" {
-  subnet_id                 = azurerm_subnet.azure_bastion.id
+  subnet_id                 = azurerm_subnet.log-export-azure-bastion-subnet.id
   network_security_group_id = azurerm_network_security_group.log-export-bastion-nsg.id
   depends_on = [
     azurerm_bastion_host.log-export-bastion-instance
@@ -121,7 +121,7 @@ resource "azurerm_bastion_host" "log-export-bastion-instance" {
 
   ip_configuration {
     name                 = "configuration"
-    subnet_id            = azurerm_subnet.azure_bastion.id
+    subnet_id            = azurerm_subnet.log-export-azure-bastion-subnet.id
     public_ip_address_id = azurerm_public_ip.log-export-bastion-public-ip.id
   }
 }
