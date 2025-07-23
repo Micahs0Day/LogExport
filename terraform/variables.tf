@@ -2,33 +2,61 @@
 # Variables
 #---------------------------
 
-# Provider Config
+# Azure Environment
 variable "location" {
-  default = "eastus2"
+  default = "eastus"
 }
 
 variable "tenant_id" {
-  default = ""
+  default = "<tenant_id>"
 }
 
 variable "subscription_id" {
-  default = ""
+  default = "<sub_id>"
 }
 
 variable "project" {
-  default = "log-export"
+  default = "logexport"
 }
 
 variable "resource_group_name" {
-  default = ""
+  default = "<rg-name>"
   type    = string
+}
+
+variable "log_analytics_workspace_id" {
+  default = "/subscriptions/<sub_id>/resourceGroups/<rg_name>/providers/Microsoft.OperationalInsights/workspaces/<la_workspace_id>"
+  type    = string
+}
+
+# Identities
+variable "user_obj-id" {
+  default = "<personal_user_obj_id>"
+  type    = string
+}
+
+variable "sp_object_id" {
+  default = "<service_principal_obj_id>"
+}
+
+variable "managed_identity" {
+  default = "/subscriptions/<sub_id>/resourceGroups/<rg_name>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<mlws-identity-name>"
+}
+
+variable "managed_identity_id" {
+  default = "<managed_principal_id>"
 }
 
 # External IPs
 variable "external_ips" {
   description = "The external IPs allowed to access the workspace."
   type        = list(any)
-  default     = [""]
+  default     = ["<other>", "<my_public_ip>"]
+}
+
+variable "my_public_ip" {
+  default = ["<IP>/32"]
+  type    = list(any)
 }
 
 # Subnets
@@ -42,41 +70,4 @@ variable "mlw_subnet_space" {
   type        = list(string)
   description = "IPv4 space of the ML workspace subnet"
   default     = ["10.0.1.0/24"]
-}
-
-variable "bastion_subnet_space" {
-  type        = list(string)
-  description = "Address space of the bastion subnet"
-  default     = ["10.0.2.0/24"]
-}
-
-variable "jumpbox_subnet_space" {
-  type        = list(string)
-  description = "Address space of the Jumpbox subnet"
-  default     = ["10.0.3.0/24"]
-}
-
-variable "azfw_subnet_space" {
-  type        = list(string)
-  description = "Address space of the azfw subnet"
-  default     = ["10.0.4.0/26"]
-}
-
-# Jumpbox
-variable "log-export-jumpbox_name" {
-  type        = string
-  description = "Name of jumpbox vm"
-  default     = "logxportjumpbox"
-}
-variable "log-export-jumpbox-admin" {
-  type        = string
-  description = "Admin username of jumpbox vm"
-  default     = "exportadmin"
-}
-
-variable "log-export-jumpbox-admin-pw" {
-  type        = string
-  description = "Password for the admin username of jumpbox vm"
-  default     = "ChangeMe123!"
-  sensitive   = true
 }
