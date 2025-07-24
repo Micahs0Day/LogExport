@@ -5,10 +5,11 @@
         "assignableScopes": [
             "/subscriptions/<subscription_id>/resourceGroups/<rg-name>"
         ],
-        "permissions": [
+         "permissions": [
             {
                 "actions": [
                     "Microsoft.Authorization/*/read",
+                    "Microsoft.OperationalInsights/workspaces/sharedKeys/action",
                     "Microsoft.ClassicCompute/virtualMachines/extensions/*",
                     "Microsoft.ClassicStorage/storageAccounts/listKeys/action",
                     "Microsoft.Compute/availabilitySets/*",
@@ -101,12 +102,25 @@
                     "Microsoft.Storage/storageAccounts/listKeys/action",
                     "Microsoft.Storage/storageAccounts/read",
                     "Microsoft.Storage/storageAccounts/*",
-                    "Microsoft.Support/*"
+                    "Microsoft.Authorization/*/read",
+                    "Microsoft.Insights/alertRules/*",
+                    "Microsoft.Resources/deployments/*",
+                    "Microsoft.Resources/subscriptions/resourceGroups/read",
+                    "Microsoft.Support/*",
+                    "Microsoft.KeyVault/checkNameAvailability/read",
+                    "Microsoft.KeyVault/deletedVaults/read",
+                    "Microsoft.KeyVault/locations/*/read",
+                    "Microsoft.KeyVault/vaults/*/read",
+                    "Microsoft.KeyVault/operations/read"
                 ],
                 "notActions": [
                     "Microsoft.KeyVault/locations/deletedVaults/purge/action"
                 ],
-                "dataActions": [],
+                "dataActions": [
+                    "Microsoft.KeyVault/vaults/keys/*",
+                    "Microsoft.KeyVault/vaults/keyrotationpolicies/*",
+                    "Microsoft.KeyVault/vaults/secrets/*"
+                ],
                 "notDataActions": []
             }
         ]
